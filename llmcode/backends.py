@@ -82,10 +82,10 @@ class OpenAIBackend(LLMBackend):
 
 class LocalLlamaBackend(LLMBackend):
     """Call a local LM Studio/llama.cpp server running the OpenAI
-    compatible REST API (default: http://127.0.0.1:1234)."""
+    compatible REST API (default: http://localhost:1234)."""
 
     BASE_URL = os.getenv(
-        "LLMCODE_LLAMA_URL", "http://127.0.0.1:1234/v1/chat/completions"
+        "LLMCODE_LLAMA_URL", "http://localhost:1234/v1/chat/completions"
     )
 
     def query(
