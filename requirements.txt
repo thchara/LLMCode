@@ -1,6 +1,6 @@
 umap-learn
 nltk
-pandas
+pandas>=2.0
 matplotlib==3.5.1
 notebook
 ipywidgets
