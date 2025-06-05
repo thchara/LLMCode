@@ -29,6 +29,8 @@ import time
 import json
 from itertools import chain
 from sklearn.neighbors import NearestNeighbors
+from llmcode.logging_utils import log_prompt
+
 
 
 # globals: OpenAI client instances
