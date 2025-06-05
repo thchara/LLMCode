@@ -1,7 +1,6 @@
 umap-learn
 nltk
 pandas>=2.0
-matplotlib==3.5.1
 notebook
 ipywidgets
 openai>=1.0 
@@ -13,3 +12,4 @@ tiktoken
 levenshtein
 titlecase
 httpx>=0.27
+
