@@ -28,6 +28,7 @@ import time
 import json
 from itertools import chain
 from sklearn.neighbors import NearestNeighbors
+from .logging_utils import log_prompt
 from .backends import OpenAIBackend
 
 
@@ -330,9 +331,17 @@ def query_LLM_batch(
                         time.sleep(5)
                         success = False
                 if response.choices[0].message.content is None:
-                    continuations.append("")
+                    result = ""
                 else:
-                    continuations.append(response.choices[0].message.content.strip())
+                    result = response.choices[0].message.content.strip()
+                continuations.append(result)
+                log_prompt(
+                    prompt,
+                    result,
+                    model=model,
+                    temperature=temperature,
+                    system_prompt=system_message,
+                )
         else:
             # each batch in the prompt becomes its own asynchronous chat completion request
             async def batch_request(prompt_batch):
@@ -361,6 +370,14 @@ def query_LLM_batch(
             continuations = [
                 response.choices[0].message.content.strip() for response in responses
             ]
+            for p, c in zip(prompt_batch, continuations):
+                log_prompt(
+                    p,
+                    c,
+                    model=model,
+                    temperature=temperature,
+                    system_prompt=system_message,
+                )
 
         # before we return the continuations, ensure that we don't violate OpenAI's rate limits
         total_tokens = 0
@@ -393,6 +410,14 @@ def query_LLM_batch(
         )
         # extract continuations
         continuations = [choice.text for choice in response.choices]
+        for p, c in zip(prompt_batch, continuations):
+            log_prompt(
+                p,
+                c,
+                model=model,
+                temperature=temperature,
+                system_prompt=system_message,
+            )
 
         # before we return the continuations, ensure that we don't violate OpenAI's rate limits
         total_tokens = 0
@@ -445,16 +470,22 @@ def query_LLM(
 
     continuations = []
     for prompt in prompts:
-        continuations.append(
-            backend.query(
-                prompt,
-                system_prompt=system_message,
-                temperature=temperature,
-                model=model,
-                max_tokens=max_tokens,
-                stop=stop,
-            )
+        response = backend.query(
+            prompt,
+            system_prompt=system_message,
+            temperature=temperature,
+            model=model,
+            max_tokens=max_tokens,
+            stop=stop,
         )
+        log_prompt(
+            prompt,
+            response,
+            model=model,
+            temperature=temperature,
+            system_prompt=system_message,
+        )
+        continuations.append(response)
 
     return continuations[0] if return_single else continuations
 
@@ -491,7 +522,15 @@ def query_LLM_with_response_format(
         except openai.RateLimitError:
             print("Rate limit error! Will retry in 5 seconds")
             time.sleep(5)
-    return response.choices[0].message.parsed
+    parsed = response.choices[0].message.parsed
+    log_prompt(
+        prompt,
+        str(parsed),
+        model=model,
+        temperature=0.0,
+        system_prompt=None,
+    )
+    return parsed
 
 
 def set_cache_directory(dir):
