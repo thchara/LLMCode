@@ -12,4 +12,4 @@ tiktoken
 levenshtein
 titlecase
 httpx>=0.27
-
+bs4
