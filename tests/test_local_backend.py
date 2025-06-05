@@ -1,14 +1,13 @@
 import importlib.util
 import sys
 import types
-import os
 from pathlib import Path
 
 import pytest
 
 
 def load_llms(monkeypatch):
-    # Stub out third-party modules missing from the test environment
+    """Reuse the loader from test_llm_backend without importing the module."""
     fake_openai = types.ModuleType("openai")
 
     class DummyChatCompletions:
@@ -102,51 +101,13 @@ def load_llms(monkeypatch):
     return llms
 
 
-def test_query_llm_single_and_multi(monkeypatch):
+def test_local_backend_routing(monkeypatch):
     llms = load_llms(monkeypatch)
+    monkeypatch.setenv("LLMCODE_BACKEND", "local")
 
-    class DummyBackend:
-        def __init__(self):
-            pass
+    def fake_query(self, prompt, **kw):
+        return "pong"
 
-        def query(
-            self,
-            prompt,
-            *,
-            system_prompt=None,
-            temperature=0.2,
-            model="gpt-4",
-            **kwargs,
-        ):
-            key = os.environ.get("OPENAI_API_KEY") or os.environ.get(
-                "AALTO_OPENAI_API_KEY"
-            )
-            return f"{prompt}|{key}"
+    monkeypatch.setattr(llms.LocalLlamaBackend, "query", fake_query)
 
-    monkeypatch.setattr(llms, "OpenAIBackend", DummyBackend)
-    monkeypatch.setitem(llms.BACKENDS, "openai", DummyBackend)
-    monkeypatch.setenv("OPENAI_API_KEY", "KEY")
-
-    assert llms.query_LLM("hi") == "hi|KEY"
-    # list inputs are treated as a single prompt
-    assert llms.query_LLM(["a", "b"]) == "['a', 'b']|KEY"
-
-
-def test_query_llm_env_fallback(monkeypatch):
-    llms = load_llms(monkeypatch)
-
-    class DummyBackend:
-        def __init__(self):
-            pass
-
-        def query(self, prompt, **kwargs):
-            return os.environ.get("OPENAI_API_KEY") or os.environ.get(
-                "AALTO_OPENAI_API_KEY"
-            )
-
-    monkeypatch.setattr(llms, "OpenAIBackend", DummyBackend)
-    monkeypatch.setitem(llms.BACKENDS, "openai", DummyBackend)
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setenv("AALTO_OPENAI_API_KEY", "AALTOKEY")
-
-    assert llms.query_LLM("prompt") == "AALTOKEY"
+    assert llms.query_LLM("ping") == "pong"

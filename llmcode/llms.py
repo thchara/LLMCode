@@ -29,7 +29,9 @@ import json
 from itertools import chain
 from sklearn.neighbors import NearestNeighbors
 from .logging_utils import log_prompt
-from .backends import OpenAIBackend
+from .backends import OpenAIBackend, LocalLlamaBackend
+
+BACKENDS = {"openai": OpenAIBackend, "local": LocalLlamaBackend}
 
 
 # globals: OpenAI client instances
@@ -38,6 +40,29 @@ embed_client = None
 client_async = None
 API_type = None
 __all__ = ["API_type", "client", "embed_client", "client_async"]
+
+
+def query_LLM(
+    prompt,
+    system_prompt=None,
+    temperature=0.2,
+    model="gpt-4",
+    *,
+    backend: str | None = None,
+    **kwargs,
+):
+    _backend_name = backend or os.getenv("LLMCODE_BACKEND", "openai")
+    backend_cls = BACKENDS.get(_backend_name)
+    if backend_cls is None:
+        raise ValueError(f"Unknown backend: {_backend_name}")
+    return backend_cls().query(
+        prompt,
+        system_prompt=system_prompt,
+        temperature=temperature,
+        model=model,
+        **kwargs,
+    )
+
 
 """
 Set up rewriting the base path with Aalto mappings
@@ -436,7 +461,7 @@ def query_LLM_batch(
     return continuations
 
 
-def query_LLM(
+def _query_LLM_openai(
     prompts,
     model=None,
     max_tokens=None,
@@ -460,13 +485,7 @@ def query_LLM(
         prompts = [prompts]
         return_single = True
 
-    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("AALTO_OPENAI_API_KEY")
-    assert api_key, (
-        "you must set the `OPENAI_API_KEY` or `AALTO_OPENAI_API_KEY` "
-        "environment variable."
-    )
-
-    backend = OpenAIBackend(api_key=api_key)
+    backend = OpenAIBackend()
 
     continuations = []
     for prompt in prompts:

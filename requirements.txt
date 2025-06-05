@@ -12,3 +12,4 @@ hdbscan
 tiktoken
 levenshtein
 titlecase
+httpx>=0.27
