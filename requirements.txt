@@ -4,7 +4,7 @@ pandas>=2.0
 matplotlib==3.5.1
 notebook
 ipywidgets
-openai
+openai>=1.0 
 plotly
 seaborn
 mne==0.24.1
