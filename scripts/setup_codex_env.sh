@@ -16,10 +16,11 @@ echo "[*] Creating and activating virtualenv…"
 python -m venv venv          # uses system Python 3.12
 source venv/bin/activate
 python -m pip install --upgrade pip wheel setuptools
+python -m pip install --upgrade "pip>=24.0"
 
 echo "[*] Installing project dependencies…"
 # Make sure matplotlib resolves to a wheel that supports cp312
-python -m pip install "matplotlib>=3.9,<4.0"
+python -m pip install --only-binary :all: "matplotlib==3.8.4"
 python -m pip install -r requirements.txt
 
 echo "[*] Installing dev / test tooling…"
