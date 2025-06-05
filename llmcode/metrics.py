@@ -360,6 +360,41 @@ def get_llm_and_human_codes_by_text(df_input, coded_texts):
         # For each text, extract all LLM and human-generated codes
         llm_codes = merge_codes(llm_coded_text) if llm_coded_text else None
         human_codes = merge_codes(human_coded_text) if human_coded_text else None
+
         
         data.append((text, llm_codes, human_codes))
     return pd.DataFrame(data, columns=["text", "codes", "human_codes"])
+
+from collections import Counter
+from .hier import common_ancestor_depth
+
+
+def cohen_kappa_hier(
+    labels_a: list[str],
+    labels_b: list[str],
+    delim: str = " > ",
+    sibling_credit: float = 0.5,
+) -> float:
+    """Cohen's kappa for hierarchical labels."""
+    if len(labels_a) != len(labels_b):
+        raise ValueError("labels_a and labels_b must have the same length")
+
+    def _weight(a: str, b: str) -> float:
+        if a == b:
+            return 1.0
+        return sibling_credit if common_ancestor_depth(a, b, delim=delim) > 0 else 0.0
+
+    weights = [_weight(a, b) for a, b in zip(labels_a, labels_b)]
+    po = float(np.mean(weights))
+
+    counts_a = Counter(labels_a)
+    counts_b = Counter(labels_b)
+    n = len(labels_a)
+    pe = sum((counts_a[l] / n) * (counts_b.get(l, 0) / n) for l in set(labels_a) | set(labels_b))
+
+    if po == 1.0:
+        return 1.0
+    denom = 1.0 - pe
+    if denom == 0:
+        return 0.0
+    return (po - pe) / denom
